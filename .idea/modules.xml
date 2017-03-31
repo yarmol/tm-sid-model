@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tm-sid-model.iml" filepath="$PROJECT_DIR$/.idea/modules/tm-sid-model.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tm-sid-model_main.iml" filepath="$PROJECT_DIR$/.idea/modules/tm-sid-model_main.iml" group="tm-sid-model" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tm-sid-model_test.iml" filepath="$PROJECT_DIR$/.idea/modules/tm-sid-model_test.iml" group="tm-sid-model" />
+    </modules>
+  </component>
+</project>
