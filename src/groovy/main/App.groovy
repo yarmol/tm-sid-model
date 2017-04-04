@@ -2,13 +2,15 @@
  * Created by vitaly on 31.03.17.
  */
 
+
+
+
 import org.codehaus.jackson.map.ObjectMapper
 
-import static Utils.*;
-import static Invokators.*;
-import static CodeGenerator.*;
-import groovy.json.*
+import java.util.concurrent.LinkedBlockingQueue
 
+import static Utils.*
+import static CodeGenerator.*
 
 public class App {
 
@@ -18,16 +20,30 @@ public class App {
             "StringValue": "String"
     ]
 
-    public static usedTypes                         = new HashSet();
-    public static existedClasses                    = new HashSet();
-    public static absentTypes                       = new HashSet();
-    public static map                               = new HashMap();
-    public static attributeTypeClasses              = new TreeMap();
-    public static propertiesTypeClasses             = new TreeMap();
-    public static classPackage                      = new TreeMap();
-    public static List<PackageDescription> packages = new ArrayList();
-    public static String currentDir                 = new File(".").getAbsolutePath() + '/src/java/main/'
-    public static boolean storeMode = true;
+    private static Set ncUsedTypes                      = new HashSet();
+    private static Set ncExistedClasses                 = new HashSet();
+    private static Set ncAbsentTypes                    = new HashSet();
+    private static Set ncProcessedPackages              = new HashSet();
+    private static Set ncNestedPackages                 = new HashSet();
+
+
+    public static Set usedTypes                         = Collections.synchronizedSet(ncUsedTypes);
+    public static Set existedClasses                    = Collections.synchronizedSet(ncExistedClasses);
+    public static Set absentTypes                       = Collections.synchronizedSet(ncAbsentTypes);
+    public static Set processedPackages                 = Collections.synchronizedSet(ncProcessedPackages);
+    public static Set nestedPackages                    = Collections.synchronizedSet(ncNestedPackages);
+
+    public static Set multiplicities                    = Collections.synchronizedSet((Set)new HashSet());
+
+
+    public static LinkedBlockingQueue<Pair> queue       = new LinkedBlockingQueue();;
+    public static Map attributeTypeClasses              = Collections.synchronizedMap((Map)new TreeMap());
+    public static Map propertiesTypeClasses             = Collections.synchronizedMap((Map)new TreeMap());
+    public static Map classPackage                      = Collections.synchronizedMap((Map)new TreeMap());
+    public static List<PackageDescription> packages     = Collections.synchronizedList((List)new ArrayList());
+    public static String currentDir                     = new File(".").getAbsolutePath() + '/src/java/main/'
+
+    public static boolean storeMode = false;
 
     public static def processingClosure = { it ->
         if (it.toString().startsWith("Class ")) {
@@ -48,49 +64,73 @@ public class App {
         return super.toString()
     }
 
+
+
+
     public static void main(String[] args) {
 
+        def threadList = [];
         if (storeMode) {
-//['Usage ABE']
-            def filter = ['Party ABE']
-            map = fillMap().findAll {filter.contains(it.key)}
-            //.findAll { it.key == 'Agreement ABE' }
 
-            println "Packages: ${map.size()}"
+            //def filter = ['Service Problem ABE'];
+            //fillMap(filter)
 
-            map.each {
-                //def text = new URL(it.value).text
-                //println text
-                def url          = it.value
-                def resoursePath = it.value.split('/')[-1]
-                def urlPath      = it.value - resoursePath
+            fillMap();
 
-                println it.key + " $url"
+            println "Packages: ${queue.size()}"
 
-                def htmlPackagePage = getUrlResponse(url)
+            for (int i = 0; i < 20; ++i) {
 
-                fillPackage(htmlPackagePage, it.key, url)
+                try {
+                    println "Thread : ${i.toString()}"
+                    Thread th = new Thread(new PackageProcessor())
+                    threadList << th
+                    th.setName(i.toString())
+                    th.start();
+                } catch (Exception e) {
+                    println e;
+                }
             }
 
-            storeFile('existed',existedClasses)
-            storeFile('used',usedTypes)
-            storeFile('packages',packages)
-            storeFile('attributeTypeClasses',attributeTypeClasses)
-            storeFile('propertiesTypeClasses',propertiesTypeClasses);
+            threadList.each { Thread t ->
+                if (t.alive) {
+                    t.join();
+                }
+            }
+
+            println "Storing..."
+
+            def setExisted    = new HashSet()
+            setExisted.addAll(existedClasses)
+
+            def setUsed       = new HashSet()
+            setUsed.addAll(usedTypes)
+
+            def listPackages  = new ArrayList()
+            listPackages.addAll(packages)
+
+            def mapAttributes = new HashMap()
+            mapAttributes.putAll(attributeTypeClasses)
+
+            def mapProperties = new HashMap()
+            mapProperties.putAll(propertiesTypeClasses)
+
+            storeFile('existed', setExisted)
+            storeFile('used', setUsed )
+            storeFile('packages', listPackages)
+            storeFile('attributeTypeClasses', mapAttributes )
+            storeFile('propertiesTypeClasses', mapProperties );
             storeJson()
 
-            println("peoperties:  ")
-            propertiesTypeClasses.each {
-                println it
-            }
+            println "multiplicities=$multiplicities"
 
         } else {
-            existedClasses = restoreFile('existed').collect(processingClosure)
-            usedTypes = restoreFile('used').collect {
+            Set existedClasses       = restoreFile('existed').collect(processingClosure)
+            Set usedTypes            = restoreFile('used').collect {
                 return it.toString().trim()
             }
-            packages = restoreFile('packages')
-            attributeTypeClasses = restoreFile('attributeTypeClasses',)
+            List packages            = restoreFile("packages");
+            Map attributeTypeClasses = restoreFile('attributeTypeClasses',)
 
 
             println "existedClasses 1 = ${existedClasses.size()} = " + existedClasses.findAll{it.toString().contains(':')}
@@ -116,9 +156,9 @@ public class App {
 
             //println "diffs=${diffs.size()}" + diffs.sort()
             //println "packages = " + packages.sort()
-            /*packages.each { p ->
+            packages.each { p ->
                 processPackageCodeGeneration(p,false)
-            }*/
+            }
         }
 
 
@@ -165,6 +205,7 @@ public class App {
             jsonOut.createNewFile();
         } else {
             jsonOut.delete();
+            jsonOut.createNewFile();
         }
 
         jsonOut << json;
@@ -172,9 +213,8 @@ public class App {
 
 
     public  static <T> T restoreFile(def fileName) {
-        def file = new File(".").getAbsolutePath() + '/src/groovy/resources/' + fileName + '.bin'
-        println file;
-        def storeFile = new File(file);
+        def normalizedInitPath = new File(".").getAbsolutePath().normalize().toString()
+        File storeFile = new File(normalizedInitPath + '/src/groovy/resources/' + fileName + '.bin')
         if (!storeFile.exists()) {
             return null;
         }
@@ -185,15 +225,35 @@ public class App {
         return object;
     }
 
-    public static void storeFile(def fileName,def object ) {
-        def file = new File(".").getAbsolutePath() + '/src/groovy/resources/' + fileName + '.bin'
-        println file;
-        def storeFile = new File(file);
+    public static List<PackageDescription> restoreFile() {
+        def normalizedInitPath = new File(".").getAbsolutePath().normalize().toString()
+        File storeFile = new File(normalizedInitPath + '/src/groovy/resources/packages.bin')
+        if (!storeFile.exists()) {
+            return null;
+        }
 
+        FileInputStream fileStream = new FileInputStream(storeFile);
+        ObjectInputStream ois = new ObjectInputStream(fileStream);
+        Object object = (Object) ois.readObject();
+        println object.class
+        println object
+        return object;
+    }
+
+
+    public static void storeFile(def fileName,def object ) {
+
+        def normalizedInitPath = new File(".").getAbsolutePath().normalize().toString()
+
+        File storeFile = new File(normalizedInitPath + '/src/groovy/resources/' + fileName + '.bin')
+
+        println "Storing...${storeFile.getAbsolutePath()}"
+        
         if (!storeFile.exists()) {
             storeFile.createNewFile();
         } else {
             storeFile.delete();
+            storeFile.createNewFile();
         }
 
         FileOutputStream fileStream = new FileOutputStream(storeFile);

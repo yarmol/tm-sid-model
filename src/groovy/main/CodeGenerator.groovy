@@ -24,9 +24,9 @@ public class CodeGenerator {
             ClassDescription c ->
                 StringBuilder sb = new StringBuilder();
                 File classFile   = new File(packagePath + '/' + c.name + '.java');
-                def commentary = c.comment.toString().replaceAll(/<\/br>/, '')
+                def commentary   = c.comment.toString().replaceAll(/<\/br>/, '')
 
-                def classHeader = getClassHeader(p, commentary, c.name, c.stereotype)
+                def classHeader = getClassHeader(p, commentary, c)
 
                 sb.append(classHeader)
 
