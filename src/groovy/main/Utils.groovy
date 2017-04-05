@@ -1,8 +1,10 @@
-
 import static App.*
 
 /**
+ *
+ *
  * Created by vitaly on 31.03.17.
+ *
  */
 class Utils {
 
@@ -22,7 +24,7 @@ class Utils {
             return result.trim();
         };
         return ic.trim();
-        
+
     }
 
     public static def getPackageDoc(PackageDescription pck) {
@@ -51,7 +53,7 @@ class Utils {
                                         String comment,
                                         ClassDescription c) {
 
-        println "class header for ${c.stereotype} ${c.name}"
+        //println "class header for ${c.stereotype} ${c.name}"
         def result = getPackageDoc(pck)
 
         result += "package ${pck.packageName} ;\n\n"
@@ -69,16 +71,35 @@ class Utils {
             result += "* $it \n"
         }
 
-        result += " @since SID_R16.5\n";
-        result += "*/ \n\n";
+        if (c != null) {
+            if (c.inheritsDescription != null && c.inheritsDescription.size() != 0) {
+                result += "\nInheritance tree:";
+                c.inheritsDescription.each {
+                    result += " |- \n ${it}"
+                }
+            }
 
-        def extendsFrom = ''
-        if (c.inheritsFrom != null) {
-            extendsFrom = "extends ${c.inheritsFrom}";
+            result += " @since SID_R16.5\n";
+            result += "*/ \n\n";
+
+
+            def extendsFrom = ''
+            def inheritsFrom = c.inheritsFrom
+            if (inheritsFrom != null && inheritsFrom.size() != 0) {
+                def collectedList = inheritsFrom.collect {
+                    it.replaceAll(/<\/[\w]+>/, '')
+                }
+                def extendsList = collectedList.join(',')
+                extendsFrom = "extends " + extendsList;
+            }
+
+            def abstractHeader = ''
+            if (c.isAbstract) {
+                abstractHeader = 'abstract'
+            }
+
+            result += "public ${abstractHeader} ${c.stereotype} ${c.name} ${extendsFrom} {\n\n"
         }
-
-        result += "public ${c.stereotype} ${c.name} ${extendsFrom} {\n\n"
-
         return result;
     }
 
@@ -114,7 +135,7 @@ class Utils {
         }
         result += "\n*/";
 
-        result += "$name ,\n"
+        result += "\n $name ,\n"
         return result;
     }
 
@@ -166,7 +187,7 @@ class Utils {
 
         def prefix = "org.tmforum"
 
-        String name   = packageDescription.packageId
+        String name = packageDescription.packageId
                 .replaceAll(/ABE/, 'business_entity')
                 .toLowerCase()
                 .replaceAll(/\s/, '_')
@@ -187,9 +208,9 @@ class Utils {
 
         //name =
 
-        def result = [prefix,domain,name].join('.')
-                //domain.toLowerCase().replaceAll(/\s/, '.').split(/\./).reverse().join('.') +
-                //'.' + normalize(name).toLowerCase().replaceAll(/\s/, '.').split(/\./).reverse().join('.');
+        def result = [prefix, domain, name].join('.')
+        //domain.toLowerCase().replaceAll(/\s/, '.').split(/\./).reverse().join('.') +
+        //'.' + normalize(name).toLowerCase().replaceAll(/\s/, '.').split(/\./).reverse().join('.');
 
         return result;
 
@@ -200,7 +221,7 @@ class Utils {
         try {
             def resultComment = text =~ /(?:<a name="documentationSection"><\\/a>)([\w\W]+?)(?:<\\/p>)/
             def comment = resultComment[0][1]
-            def result  = comment.toString().replaceAll(/<\/br>/, '')
+            def result = comment.toString().replaceAll(/<\/br>/, '')
             return result;
         } catch (Exception e) {
             return null
@@ -218,22 +239,23 @@ class Utils {
         }
     }
 
-    public static def getDomain (String text) {
+    public static def getDomain(String text) {
         try {
             def result = text =~ /(?:<span class="PackageFullyQualifiedName">)(?:<\\/span>[\w\W]+?"ElementTitle">)?([\w\W]+?)(?:<\\/span>)/;
-                    // /(?:<span class="PackageFullyQualifiedName">)([\w\W]+?)(?:<\\/span>)/
+            // /(?:<span class="PackageFullyQualifiedName">)([\w\W]+?)(?:<\\/span>)/
             def name = result[0][1]
             return name
         } catch (Exception e) {
             return null
         }
     }
-    public static def getRows ( String text, String pattern) {
+
+    public static def getRows(String text, String pattern) {
         def result = text =~ pattern
         return result
     }
 
-    public static def getText (String text, String pattern, int index = 1) {
+    public static def getText(String text, String pattern, int index = 1) {
         try {
             def matcher = text =~ pattern
             def result = matcher[0][index]
@@ -283,7 +305,7 @@ class Utils {
         }
     }
 
-    public static def getScreenType (text) {
+    public static def getScreenType(text) {
         try {
             def matcher = text =~ /(?:<td class="NavBarMainHighlight">)([\w\W]+?)(?:<\\/td>)/
             def result = matcher[0][1]
@@ -294,11 +316,26 @@ class Utils {
     }
 
     public static def getMultiplicity(String text) {
-        def pattern = /(?:<td class="PropertyName"><b>Multiplicity<\\/b><\\/td><td class="PropertyValue">)([\w\W]+?)/;
+        def pattern = /(?:<td class="PropertyName"><b>Multiplicity<\\/b><\\/td><td class="PropertyValue">)([\w\W]+?)(?:<\\/td>)/;
         try {
             def matcher = text =~ pattern
             def mutiplicity = matcher[0][1];
             return mutiplicity
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static def getAbstract(String text) {
+        def pattern = /(?:<td class="PropertyName"><b>Is Abstract<\\/b><\\/td><td class="PropertyValue">)([\w\W]+?)(?:<\\/td>)/;
+        try {
+            def matcher = text =~ pattern
+            def abstractValue = matcher[0][1];
+            if (abstractValue != null && abstractValue == 'true') {
+                return true;
+            } else {
+                return false;
+            }
         } catch (Exception e) {
             return null;
         }

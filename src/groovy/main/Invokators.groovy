@@ -1,6 +1,5 @@
+import static App.*
 import static Utils.*
-import static App.*;
-
 /**
  * Created by vitaly on 01.04.17.
  */
@@ -22,6 +21,8 @@ class Invokators {
     }
 
     public static void classFiller(textClass, classDescription) {
+
+
         def rows
         rows = getRows(textClass, /(?:<tr>[\r\n]?<td class="packagedElementType">)([\w\W]+?)(?:<\\/tr>)/)
         rows.each {
@@ -49,6 +50,7 @@ class Invokators {
             if (!type) {
                 type = "Object";
             }
+
 
             usedTypes.add(type);
 
@@ -84,10 +86,12 @@ class Invokators {
                         Pair pair              = new Pair(packageName, rootUrl + packageUrlRequest);
 
                         if (!nestedPackages.contains(packageName))  {
+                            //println "     [${Thread.currentThread().getName()}] >> $packageName"
                             queue.put(pair)
                         }
 
                         nestedPackages.add(packageName)
+                        //println "      [${Thread.currentThread().getName()}] nestedPackages = ${nestedPackages.size()}"
                     }
                 }
             }
@@ -100,31 +104,8 @@ class Invokators {
             } else {
                 item.type = type;
             }
-
+            ///println "     [${Thread.currentThread().getName()}] multiplicity = ${multiplicity.toString()}"
             classDescription.fields.add(item)
-
-
-            /*println("properties: ")
-            propertiesTables.each {
-                def props = getPropertyType(it.toString());
-                println("property item: ${props == null}")
-                if (props != null) {
-                    def attrClassName = normalize(props['class'])
-                    propertiesTypeClasses.put(attrClassName, props['url'])
-                }
-            } */
-            //}
-
-            //attribute table
-            /*def isAttributeTable = getAttrTable(textClass)
-            if (isAttributeTable) {
-                def attrType = getAttrType(textClass)
-                if (attrType != null) {
-                    def attrClassName = normalize(attrType['class'])
-                    attributeTypeClasses.put(attrClassName, attrType['url'])
-                }
-
-            }*/
         }
     }
 
@@ -153,12 +134,13 @@ class Invokators {
 
         //println " * " + key
         //println " ** " + name
-        println "     ** @ [${packageDescription.packageName}]"
+        println "     ** [${Thread.currentThread().getName()}]  @ [${packageDescription.packageName}]"
         //println " // ** " + comment
 
         //println "Package ${key} classes: ${tableItemsResult.size()}"
         tableItemsResult.each {
             def tableItem = it[1]
+
             classFiller(packageDescription, tableItem)
         }
 
@@ -174,7 +156,6 @@ class Invokators {
         def className = tableItem.split('::')[-1]
         def linkUrlMtch = tableItem =~ /(?:href=")([\w\W]+?)(?:">)/
         def link = rootUrl + linkUrlMtch[0][1]
-
 
 
         def htmlClassPage = getUrlResponse(link).toString();
@@ -204,49 +185,79 @@ class Invokators {
         fillClassDescriptor(classDescription, classNameDescr, ["Data Type": 'class']);
         fillClassDescriptor(classDescription, classNameDescr, ["Enumeration": 'enum']);
 
-        classDescription.comment = classComment ?: null
+        if (!classDescription?.name?.contains('Class Diagram')) {
+            
+            classDescription.comment = classComment ?: null
 
-        /*println " = " + classNameDescr + " [${packageDescription.packageName}] "
-        println "   // = " + classComment
-        println "   @ =  " + link
-        println "   = ${classDescription}";    //elements   */
+            classDescription.url = link
+
+            classDescription.isAbstract = getAbstract(htmlClassPage);
+
+            /*
+            println " = " + classNameDescr + " [${packageDescription.packageName}] "
+            println "   // = " + classComment
+            println "   @ =  " + link
+            println "   = ${classDescription}";    //elements   */
 
 
-        if (classPackage[classNameDescr] == null) {
-            classPackage[classNameDescr] = [packageDescription.packageName]
-        } else {
-            def listPackages = classPackage[classNameDescr];
-            listPackages << packageDescription.packageName
-            classPackage[classNameDescr] = listPackages
+            if (classPackage[classNameDescr] == null) {
+                classPackage[classNameDescr] = [packageDescription.packageName]
+            } else {
+                def listPackages = classPackage[classNameDescr];
+                listPackages << packageDescription.packageName
+                classPackage[classNameDescr] = listPackages
+            }
+
+
+            if (classNameDescr.toString().contains("Enumeration")) {
+                enumFiller(htmlClassPage, classDescription)
+            } else {
+                classFiller(htmlClassPage, classDescription)
+            }
+
+            //inheritance
+            fillInheritance(htmlClassPage, classDescription);
+
+            packageDescription.classes.add(classDescription);
         }
-
-
-        if (classNameDescr.toString().contains("Enumeration")) {
-            enumFiller(htmlClassPage, classDescription)
-        } else {
-            classFiller(htmlClassPage, classDescription)
-        }
-
-        //inheritance
-        fillInheritance(htmlClassPage, classDescription);
-
-        packageDescription.classes.add(classDescription);
     }
 
 
     public static void fillInheritance(def htmlClassPage,ClassDescription classDescription) {
         try {
-            def pattern = /Attributes inherited from <a title="([A-Za-z\s]+(?:::)?)+(?:" href=")([\w\W]+?)">/;
-                    // /(?:Attributes inherited from <a title="[A-Za-z\s]+::[A-Za-z\s]+::[A-Za-z\s]+::([A-Za-z\s]+)" href=")([\w\W]+?)">/
+            
+
+            // /Attributes inherited from <a title="([A-Za-z\s]+(?:::)?)+(?:" href=")([\w\W]+?)">/;
+            //def pattern = /(?:Attributes inherited from <a title="[A-Za-z\s]+::[A-Za-z\s]+::[A-Za-z\s]+::([A-Za-z\s]+)" href=")([\w\W]+?)">/
+            def pattern = /Attributes inherited from[\w\W]+?">[\w\W]+?<\\/table>/
             def matcher = htmlClassPage =~ pattern
-            def className = matcher[0][1]
+
+            matcher.each {
+                def inheritanceTable = it
+                def inheritanceMatcher = it =~ /&nbsp;([\w\W]+?)<\\/td>(?:[\w\W]+?)<\\/table>/
+                def inheritanceObject = inheritanceMatcher[0][1]
+                classDescription.getInheritsDescription().add(inheritanceObject)
+                classDescription.getInheritsFrom().add(
+                        inheritanceObject
+                                .toString()
+                                .split('::')[-1]
+                .replaceAll(/<\/[\w]+>/,''))
+            }
+            
+            /*def className = matcher[0][1]
             def classUrl  = matcher[0][2]
 
-            //todo test
-            classDescription.inheritsFrom = className;
-            //println "   => inherits $className"
-        } catch (Exception e) {
 
+            classDescription.inheritsFrom = className;
+
+            if (queue.size() == 0) {
+                println " inheritsFrom ${className}"
+            }                               */
+            //println "   => inherits $className"
+            
+         } catch (IndexOutOfBoundsException e) {
+         } catch (Exception e) {
+            println "Error [${e}]  ${classDescription.name}"
         }
     }
 

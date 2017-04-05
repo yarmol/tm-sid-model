@@ -79,7 +79,7 @@ public class App {
 
             println "Packages: ${queue.size()}"
 
-            for (int i = 0; i < 20; ++i) {
+            for (int i = 0; i < 15; ++i) {
 
                 try {
                     println "Thread : ${i.toString()}"
@@ -93,7 +93,9 @@ public class App {
             }
 
             threadList.each { Thread t ->
+                println "Waiting thread ${t.getName()} to stop..."
                 if (t.alive) {
+                    println "..  ${t.getName()} joining..."
                     t.join();
                 }
             }
@@ -157,6 +159,7 @@ public class App {
             //println "diffs=${diffs.size()}" + diffs.sort()
             //println "packages = " + packages.sort()
             packages.each { p ->
+                println p.toString()
                 processPackageCodeGeneration(p,false)
             }
         }
