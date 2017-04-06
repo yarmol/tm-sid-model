@@ -6,6 +6,8 @@
 
 package org.tmforum.common_business_entities_domain.calendar_business_entity ;
 
+import org.tmforum.common_business_entities_domain.project_abe.entitiestobefixedinph4.Event;
+
 /**
 * null 
  @since SID_R16.5

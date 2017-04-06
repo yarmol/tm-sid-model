@@ -10,6 +10,11 @@
 
 package org.tmforum.common_business_entities_domain.business_interaction_business_entity ;
 
+import org.tmforum.customer_domain.customer_problem_business_entity.CustomerProblemWorkaround;
+import org.tmforum.engaged_party_domain.party_problem_business_entity.PartyProblemWorkaround;
+
+import java.util.List;
+
 /**
 * This entity represents a document which is related to the BusinessInte 
 * raction. This can be a document that was provided by the Customer (suc 

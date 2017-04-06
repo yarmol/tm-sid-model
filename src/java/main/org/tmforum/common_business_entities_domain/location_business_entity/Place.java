@@ -11,6 +11,29 @@
 
 package org.tmforum.common_business_entities_domain.location_business_entity ;
 
+import com.sun.deploy.model.Resource;
+import com.sun.deploy.services.Service;
+import com.sun.prism.Texture;
+
+import org.apache.tools.ant.Project;
+import org.tmforum.common_business_entities_domain.base_types_business_entity.TimePeriod;
+import org.tmforum.common_business_entities_domain.business_interaction_business_entity.BusinessInteractionLocation;
+import org.tmforum.common_business_entities_domain.calendar_business_entity.CalendarActionEntry;
+import org.tmforum.common_business_entities_domain.project_abe.project_element_business_entity.ProjectElement;
+import org.tmforum.common_business_entities_domain.project_abe.project_resource_business_entity.ProjectResource;
+import org.tmforum.common_business_entities_domain.project_abe.project_resource_business_entity.ProjectResourceHolding;
+import org.tmforum.common_business_entities_domain.project_abe.project_resource_business_entity.ProjectResourcePool;
+import org.tmforum.customer_domain.customer_order_business_entity.CustomerOrderItem;
+import org.tmforum.engaged_party_domain.party_business_entity.PartyRole;
+import org.tmforum.engaged_party_domain.party_order_business_entity.PartyOrderItem;
+import org.tmforum.enterprise_domain.workforce_abe.workforce_resource_business_entity.WorkforceOrganizationRole;
+import org.tmforum.enterprise_domain.workforce_abe.workspecification_business_entity.WorkSpecFulfillmentRate;
+import org.tmforum.product_domain.product_business_entity.Product;
+import org.tmforum.product_domain.product_offering_business_entity.ProductOffering;
+import org.tmforum.resource_domain.resource_abe.physicalresource_business_entity.PhysicalResource;
+
+import java.util.List;
+
 /**
 * Place answers the question "where ?"It is an abstract modeling concept 
 *  that provides a linking point to other parts of the SID model. 
@@ -110,7 +133,7 @@ protected CalendarActionEntry calendarActionEntry ;
 /**  
 * Field usage
 */
-protected List<Usage> usage ;
+protected List<Texture.Usage> usage ;
 
 
 

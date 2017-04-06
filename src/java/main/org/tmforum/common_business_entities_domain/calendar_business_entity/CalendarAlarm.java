@@ -6,6 +6,8 @@
 
 package org.tmforum.common_business_entities_domain.calendar_business_entity ;
 
+import org.tmforum.common_business_entities_domain.base_types_business_entity.Duration;
+
 /**
 * Is "a reminder or alarm for an event or a to-do. For example, it may b 
 * e used to define a reminder for a pending event or an overdue to-do."  

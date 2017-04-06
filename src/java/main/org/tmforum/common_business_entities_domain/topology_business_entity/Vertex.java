@@ -9,6 +9,8 @@
 
 package org.tmforum.common_business_entities_domain.topology_business_entity ;
 
+import org.tmforum.common_business_entities_domain.root_business_entities_business_entity.RootEntity;
+
 /**
 *  A node within a graph. 
  @since SID_R16.5
